@@ -1,24 +1,23 @@
 #Librerías a utilizar:
 import pyaudio
 import wave
-#import matplotlib.pyplot as plt
-#import numpy as np
-#import simpleaudio as sa
+import matplotlib.pyplot as plt
+import numpy as np
+import simpleaudio as sa
 import sounddevice as sd
 import tkinter as tk
 import os
-#from IPython.display import Audio
+from IPython.display import Audio
 from scipy.io import wavfile
 from tkinter import *
 from tkinter import filedialog
-#from tkinter import messagebox
+from tkinter import messagebox
 
 #Ventana principal:
 
 ventanaP = tk.Tk()
 ventanaP.title("Tratamiento de Señales - Grupo No. 1")
 ventanaP.geometry("1280x720")
-
 
 #Métodos y funciones:
 
@@ -53,14 +52,12 @@ def grabarMIC():
     waveFile.writeframes(b''.join(frames))
     waveFile.close()
 
-
 #Botones:
 
 abrirbtn = Button(ventanaP, text = "Explorador de Archivos", command = abrirArchivo, activebackground="red", background="green").place(x=100, y=100)
 grabarbtn = Button(ventanaP, text = "Grabar con MIC", command = grabarMIC).place(x=300, y=100)
 textbtn = Button(ventanaP, text = "Texto a Sonido").place(x=600, y=100)
 playbtn1 = Button(ventanaP, text = "▶ Reproducir", command = playFile).place(x=100, y=150)
-
-
+playbtn2 = Button(ventanaP).place(x=400, y=150)
 
 ventanaP.mainloop() 

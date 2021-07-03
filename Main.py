@@ -3,12 +3,15 @@ import pyaudio
 import wave
 import matplotlib.pyplot as plt
 import numpy as np
-import simpleaudio as sa
-import sounddevice as sd
+#import simpleaudio as sa
+#import sounddevice as sd
 import tkinter as tk
 import scipy.io.wavfile as waves
 import pygame
-from IPython.display import Audio
+import math
+import contextlib
+#from IPython.display import Audio
+from scipy import fftpack
 from tkinter import *
 from tkinter import filedialog
 from tkinter import messagebox
@@ -27,7 +30,9 @@ def abrirArchivo():
     global archivo
     archivo = filedialog.askopenfilename(title = "abrir", initialdir="C:/Downloads", filetypes=(("sound files",".wav"),))
 
-def graficaSeñalEntrada():
+def graficarSeñalEntrada():
+    #global onda
+    #global muestreo
     muestreo, onda = waves.read(archivo)
     longitud = np.shape(onda)
     canal1 = onda[:, 0].copy()
@@ -39,6 +44,7 @@ def graficaSeñalEntrada():
 def playFile():
     pygame.mixer.music.load(archivo)
     pygame.mixer.music.play(loops=0)
+    filtroPasaBajo()
 
 def stopFile():
     pygame.mixer.music.stop()
@@ -64,13 +70,49 @@ def grabarMIC():
     waveFile.writeframes(b''.join(frames))
     waveFile.close()
 
-def filtroPasaBajo():
-    s=grupo1.get()
+"""
+s=grupo1.get()
     if s==1: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa BAjo")
     if s==2: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Alto")
     if s==3: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Banda")
-    
+"""
+def filtroPasaBajo():
+    muestreo, onda = waves.read(archivo)
+    longitud = np.shape(onda)
+    canal1 = onda[:, 0].copy()
+    t=np.linspace(0,2,len(canal1),False)
+    #APLICANDO LA TRANSFORMADA DE FOURIER
+    S1 = fftpack.fft(canal1)
+    S1mod = np.abs(S1) 
+    S1arg = np.angle(S1)
+    freqs = fftpack.fftfreq(len(canal1))*muestreo
+    #CREACION DEL FILTRO PASABAJO
+    fp = []
+    for i in range (len(canal1)):
+        if np.abs(freqs[i]) < 2000:
+            fp.append(1.0)
+        else:
+            fp.append(0.0)
+    S1filt = np.multiply(fp, S1)
+    S1filtmod = np.abs(S1filt)
+    S1filtarg = np.angle(S1filt)
+    #CREACION DE LA NUEVA SEÑAL
 
+    nueva = fftpack.ifft(S1filt)
+    NUEVA = np.real(nueva)
+
+    #plt.plot(t, NUEVA)
+    #plt.xlabel('Tiempo')
+    #plt.ylabel('Amplitud')
+    #plt.show()
+    global rutaSalida
+    Wave_write('Nuevo-Anuel-RHLM2.wav', muestreo, NUEVA)
+    rutaSalida = wave.open('Nuevo-Anuel-RHLM2.wav', 'r')
+    messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Bajo" + rutaSalida)
+      
+def playFileOutput():
+    pygame.mixer.music.load(rutaSalida)
+    pygame.mixer.music.play(loops=0)
 #Botones:
 
 abrirbtn = Button(ventanaP, text = "Explorador de Archivos", command = abrirArchivo, activebackground="red", background="green").place(x=100, y=100)
@@ -79,10 +121,10 @@ textbtn = Button(ventanaP, text = "Texto a Sonido").place(x=600, y=100)
 playbtn1 = Button(ventanaP, text = "▶ Entrada 1", command = playFile).place(x=100, y=150)
 playbtn2 = Button(ventanaP, text = "▶ Entrada 2").place(x=300, y=150)
 playbtn3 = Button(ventanaP, text = "▶ Entrada 3").place(x=500, y=150)
-playbtn4 = Button(ventanaP, text = "▶ Salida 1").place(x=100, y=350)
+playbtn4 = Button(ventanaP, text = "▶ Salida 1", command = playFileOutput).place(x=100, y=350)
 playbtn5 = Button(ventanaP, text = "▶ Salida 2").place(x=300, y=350)
 playbtn6 = Button(ventanaP, text = "▶ Salida 3").place(x=500, y=350)
-playbtn7 = Button(ventanaP, text = "▉ Stop", command = graficaSeñalEntrada).place(x = 800, y=350)
+playbtn7 = Button(ventanaP, text = "▉ Stop", command = graficarSeñalEntrada).place(x = 800, y=350)
 
 grupo1 = IntVar() #variable para agrupar a los radio button
 rdbtn1 = Radiobutton(ventanaP, text = "Filtro 1", value=1, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 200)

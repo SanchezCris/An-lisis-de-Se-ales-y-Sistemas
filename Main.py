@@ -1,20 +1,27 @@
-from wave import Wave_write
+#from operator import length_hint
+#from wave import Wave_write
 import pyaudio
 import wave
 import matplotlib.pyplot as plt
 import numpy as np
 #import simpleaudio as sa
-#import sounddevice as sd
+import sounddevice as sd
 import tkinter as tk
 import scipy.io.wavfile as waves
+#from scipy.io import wavfile
 import pygame
-import math
-import contextlib
-#from IPython.display import Audio
-from scipy import fftpack
+import winsound
+#import pandas as pd
+#import math
+#import contextlib
+#import librosa
+import scipy.fftpack as fourier
+from numpy import *
 from tkinter import *
 from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import messagebox 
+#from librosa import *
+#from scipy.fftpack import  fft, ifft#from IPython.display import Audio
 
 #Ventana principal:
 
@@ -30,9 +37,65 @@ def abrirArchivo():
     global archivo
     archivo = filedialog.askopenfilename(title = "abrir", initialdir="C:/Downloads", filetypes=(("sound files",".wav"),))
 
+
+def transFourier():
+    #APLICANDO TRANSFORMADA DE FOURIER
+    winsound.PlaySound(archivo, winsound.SND_FILENAME)
+    freqCorte = 2000
+    Fs, data = waves.read(archivo)
+    audioM = data[:,0]
+    L = len(audioM)
+    Ts = 0.001
+    n = Ts*np.arange(0,L)
+    fig,ax = plt.subplots()
+    plt.plot(n, audioM)
+    plt.xlabel("Tiempo")
+    plt.ylabel("Audio")
+    gk=fourier.fft(audioM)
+    mGK = abs(gk)
+    mGK = mGK[0:L//2]
+    F=(Fs/L)*np.arange(0,L//2)
+    freqs = fourier.fftfreq(L)*Fs
+    fig,bx = plt.subplots()
+    plt.plot(F, mGK)
+    plt.xlabel("Frecuencia")
+    plt.ylabel("Amplitud")
+
+    #CREACION DEL FILTRO PASABAJO
+    fp = []
+    for i in range (L):
+        if np.abs(freqs[i]) < freqCorte:
+            fp.append(1.0)
+        else:
+            fp.append(0.0)
+    #APLICACION DEL FILTRO
+    filtrada = []
+    for i in range (L):
+        producto = fp[i]*gk[i]
+        filtrada.append(producto)
+    print(str(len(filtrada)))
+    mGK2 = filtrada[0:len(filtrada)//2]
+    fig,cx = plt.subplots()
+    plt.plot(F, mGK2)
+    plt.xlabel("Frecuencia")
+    plt.ylabel("Amplitud")
+    
+    #APLICANDO TRANSFORMADA INVERSA DE FOURIER
+    ondaSalida = fourier.ifft(mGK2)
+    nueva = np.real(ondaSalida)
+    L2 = len(nueva)
+    t = Ts*np.arange(0,L2)
+    fig,dx = plt.subplots()
+    plt.plot(t, nueva)
+    plt.xlabel('Tiempo')
+    plt.ylabel('Amplitud')
+    plt.show()
+  
+
 def graficarSeñalEntrada():
-    #global onda
-    #global muestreo
+    '''
+        global onda
+    global muestreo
     muestreo, onda = waves.read(archivo)
     longitud = np.shape(onda)
     canal1 = onda[:, 0].copy()
@@ -40,11 +103,12 @@ def graficarSeñalEntrada():
     plt.xlabel('Tiempo')
     plt.ylabel('Amplitud')
     plt.show()
+    '''
+
 
 def playFile():
     pygame.mixer.music.load(archivo)
     pygame.mixer.music.play(loops=0)
-    filtroPasaBajo()
 
 def stopFile():
     pygame.mixer.music.stop()
@@ -76,42 +140,9 @@ s=grupo1.get()
     if s==2: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Alto")
     if s==3: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Banda")
 """
-def filtroPasaBajo():
-    muestreo, onda = waves.read(archivo)
-    longitud = np.shape(onda)
-    canal1 = onda[:, 0].copy()
-    t=np.linspace(0,2,len(canal1),False)
-    #APLICANDO LA TRANSFORMADA DE FOURIER
-    S1 = fftpack.fft(canal1)
-    S1mod = np.abs(S1) 
-    S1arg = np.angle(S1)
-    freqs = fftpack.fftfreq(len(canal1))*muestreo
-    #CREACION DEL FILTRO PASABAJO
-    fp = []
-    for i in range (len(canal1)):
-        if np.abs(freqs[i]) < 2000:
-            fp.append(1.0)
-        else:
-            fp.append(0.0)
-    S1filt = np.multiply(fp, S1)
-    S1filtmod = np.abs(S1filt)
-    S1filtarg = np.angle(S1filt)
-    #CREACION DE LA NUEVA SEÑAL
-
-    nueva = fftpack.ifft(S1filt)
-    NUEVA = np.real(nueva)
-
-    #plt.plot(t, NUEVA)
-    #plt.xlabel('Tiempo')
-    #plt.ylabel('Amplitud')
-    #plt.show()
-    global rutaSalida
-    Wave_write('Nuevo-Anuel-RHLM2.wav', muestreo, NUEVA)
-    rutaSalida = wave.open('Nuevo-Anuel-RHLM2.wav', 'r')
-    messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Bajo" + rutaSalida)
       
 def playFileOutput():
-    pygame.mixer.music.load(rutaSalida)
+    pygame.mixer.music.load(archivo)
     pygame.mixer.music.play(loops=0)
 #Botones:
 
@@ -124,10 +155,10 @@ playbtn3 = Button(ventanaP, text = "▶ Entrada 3").place(x=500, y=150)
 playbtn4 = Button(ventanaP, text = "▶ Salida 1", command = playFileOutput).place(x=100, y=350)
 playbtn5 = Button(ventanaP, text = "▶ Salida 2").place(x=300, y=350)
 playbtn6 = Button(ventanaP, text = "▶ Salida 3").place(x=500, y=350)
-playbtn7 = Button(ventanaP, text = "▉ Stop", command = graficarSeñalEntrada).place(x = 800, y=350)
+playbtn7 = Button(ventanaP, text = "▉ Stop", command = transFourier).place(x = 800, y=350)
 
 grupo1 = IntVar() #variable para agrupar a los radio button
-rdbtn1 = Radiobutton(ventanaP, text = "Filtro 1", value=1, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 200)
-rdbtn2 = Radiobutton(ventanaP, text = "Filtro 2", value=2, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 250)
-rdbtn3 = Radiobutton(ventanaP, text = "Filtro 3", value=3, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 300)
+rdbtn1 = Radiobutton(ventanaP, text = "Filtro 1", value=1, variable=grupo1, ).place(x=100, y = 200)
+#rdbtn2 = Radiobutton(ventanaP, text = "Filtro 2", value=2, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 250)
+#rdbtn3 = Radiobutton(ventanaP, text = "Filtro 3", value=3, variable=grupo1, command= filtroPasaBajo).place(x=100, y = 300)
 ventanaP.mainloop() 

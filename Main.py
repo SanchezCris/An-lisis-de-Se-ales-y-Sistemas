@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 #import simpleaudio as sa
 import sounddevice as sd
+import soundfile as sf
 import tkinter as tk
 import scipy.io.wavfile as waves
 #from scipy.io import wavfile
@@ -39,24 +40,28 @@ def abrirArchivo():
 
 
 def transFourier():
-    #APLICANDO TRANSFORMADA DE FOURIER
-    winsound.PlaySound(archivo, winsound.SND_FILENAME)
-    freqCorte = 2000
-    Fs, data = waves.read(archivo)
-    audioM = data[:,0]
-    L = len(audioM)
-    Ts = 0.001
-    n = Ts*np.arange(0,L)
-    fig,ax = plt.subplots()
+    #LEYENDO LA SEÑAL DE ENTRADA
+
+    freqCorte = 2000                                #Frecuencia de corte para el filtro
+    data, Fs = sf.read(archivo, dtype='float')      #lectura del audio de entrada
+    try:audioM = data[:,0]                          #si el audio es estéreo, toma un solo canal de sonido
+    except IndexError:audioM = data                 #si el audio es mono, toma el único canal
+    L = len(audioM)                                 #longitud del vector que contiene los datos de la señal
+    Ts = 0.001                                      #tasa de muestrep
+    n = Ts*np.arange(0,L)                           #vector tiempo
+    fig,ax = plt.subplots()                         #Grafica 1, señal de entrada dominio del tiempo
     plt.plot(n, audioM)
     plt.xlabel("Tiempo")
     plt.ylabel("Audio")
+
+    #APLICANDO TRANSFORMADA DE FOURIER
+
     gk=fourier.fft(audioM)
     mGK = abs(gk)
     mGK = mGK[0:L//2]
     F=(Fs/L)*np.arange(0,L//2)
     freqs = fourier.fftfreq(L)*Fs
-    fig,bx = plt.subplots()
+    fig,bx = plt.subplots()                        #Grafica 2, espectro señal de entrada
     plt.plot(F, mGK)
     plt.xlabel("Frecuencia")
     plt.ylabel("Amplitud")
@@ -68,44 +73,28 @@ def transFourier():
             fp.append(1.0)
         else:
             fp.append(0.0)
+
     #APLICACION DEL FILTRO
     filtrada = []
     for i in range (L):
         producto = fp[i]*gk[i]
         filtrada.append(producto)
-    print(str(len(filtrada)))
     mGK2 = filtrada[0:len(filtrada)//2]
-    fig,cx = plt.subplots()
-    plt.plot(F, mGK2)
+    fig,cx = plt.subplots()                     #Grafica 3, espectro señal de salida
+    plt.plot(F, np.abs(mGK2))
     plt.xlabel("Frecuencia")
     plt.ylabel("Amplitud")
     
     #APLICANDO TRANSFORMADA INVERSA DE FOURIER
-    ondaSalida = fourier.ifft(mGK2)
-    nueva = np.real(ondaSalida)
-    L2 = len(nueva)
-    t = Ts*np.arange(0,L2)
-    fig,dx = plt.subplots()
-    plt.plot(t, nueva)
+    m3 = fourier.ifft(filtrada)
+    nuevaM3 = np.real(m3)
+    fig,dx = plt.subplots()                    #Grafica 4, señal de salida dominio del tiempo
+    plt.plot(n, nuevaM3)
     plt.xlabel('Tiempo')
     plt.ylabel('Amplitud')
+    sd.play(nuevaM3, Fs)                      #Reproduce la señal filtrada
     plt.show()
-  
-
-def graficarSeñalEntrada():
-    '''
-        global onda
-    global muestreo
-    muestreo, onda = waves.read(archivo)
-    longitud = np.shape(onda)
-    canal1 = onda[:, 0].copy()
-    plt.plot(canal1)
-    plt.xlabel('Tiempo')
-    plt.ylabel('Amplitud')
-    plt.show()
-    '''
-
-
+    
 def playFile():
     pygame.mixer.music.load(archivo)
     pygame.mixer.music.play(loops=0)
@@ -139,8 +128,7 @@ s=grupo1.get()
     if s==1: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa BAjo")
     if s==2: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Alto")
     if s==3: messagebox.showinfo(title="Diagnostico", message = "seleccionaste: Pasa Banda")
-"""
-      
+"""  
 def playFileOutput():
     pygame.mixer.music.load(archivo)
     pygame.mixer.music.play(loops=0)
